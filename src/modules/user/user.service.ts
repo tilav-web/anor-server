@@ -1,0 +1,136 @@
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User, UserDocument } from './user.schema';
+import { Confirmation, ConfirmationDocument } from './confirmation.schema';
+import { MailerService } from '@nestjs-modules/mailer';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from './dto/create-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
+
+const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+
+@Injectable()
+export class UserService {
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Confirmation.name)
+    private confirmationModel: Model<ConfirmationDocument>,
+    private readonly mailerService: MailerService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  async create(
+    createUserDto: CreateUserDto,
+  ): Promise<{ user: User; token: string }> {
+    if (createUserDto.phone) {
+      createUserDto.phone = normalizePhone(createUserDto.phone);
+    }
+
+    const salt = await bcrypt.genSalt();
+    createUserDto.password = await bcrypt.hash(createUserDto.password, salt);
+    const createdUser = new this.userModel(createUserDto);
+    const user = await createdUser.save();
+    const token = await this._createToken(user);
+    return { user, token };
+  }
+
+  async login(loginDto: LoginUserDto): Promise<{ user: User; token: string }> {
+    let findCondition;
+    if (loginDto.email) {
+      findCondition = { email: loginDto.email };
+    } else if (loginDto.phone) {
+      findCondition = { phone: normalizePhone(loginDto.phone) };
+    } else {
+      throw new UnauthorizedException('Please provide email or phone');
+    }
+
+    const user = await this.userModel.findOne(findCondition);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isPasswordMatching = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
+
+    if (!isPasswordMatching) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const token = await this._createToken(user);
+    return { user, token };
+  }
+
+  async sendConfirmationCode(recipient: string, type: 'email' | 'phone') {
+    const findCondition =
+      type === 'email'
+        ? { email: recipient }
+        : { phone: normalizePhone(recipient) };
+
+    const existingUser = await this.userModel.findOne(findCondition);
+    if (existingUser) {
+      throw new ConflictException(
+        'User with this email or phone already exists',
+      );
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const salt = await bcrypt.genSalt();
+    const hashedCode = await bcrypt.hash(code, salt);
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+
+    await this.confirmationModel.create({
+      recipient,
+      type,
+      code: hashedCode,
+      expiresAt,
+    });
+
+    if (type === 'email') {
+      await this.mailerService.sendMail({
+        to: recipient,
+        subject: 'Confirmation Code',
+        text: `Your confirmation code is: ${code}`,
+      });
+    } else {
+      // In a real application, you would use an SMS gateway here.
+      console.log(`Confirmation code for ${recipient}: ${code}`);
+    }
+  }
+
+  async findById(userId: string): Promise<User> {
+    return this.userModel.findById(userId);
+  }
+
+  async confirm(recipient: string, code: string): Promise<boolean> {
+    const confirmation = await this.confirmationModel
+      .findOne({
+        recipient,
+        expiresAt: { $gt: new Date() },
+      })
+      .sort({ createdAt: -1 });
+
+    if (confirmation) {
+      const isCodeMatching = await bcrypt.compare(code, confirmation.code);
+      if (isCodeMatching) {
+        await this.confirmationModel.deleteOne({ _id: confirmation._id });
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private async _createToken(user: UserDocument): Promise<string> {
+    const payload = { _id: user._id };
+    return this.jwtService.signAsync(payload);
+  }
+}
