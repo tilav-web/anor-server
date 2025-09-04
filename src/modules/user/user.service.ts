@@ -85,6 +85,7 @@ export class UserService {
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(code);
     const salt = await bcrypt.genSalt();
     const hashedCode = await bcrypt.hash(code, salt);
     const expiresAt = new Date();
@@ -111,18 +112,28 @@ export class UserService {
     }
   }
 
-  async findAll(page: number, limit: number, search: string): Promise<{ data: User[], total: number }> {
-    const query = search ? {
-      $or: [
-        { first_name: { $regex: search, $options: 'i' } },
-        { last_name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-      ],
-    } : {};
+  async findAll(
+    page: number,
+    limit: number,
+    search: string,
+  ): Promise<{ data: User[]; total: number }> {
+    const query = search
+      ? {
+          $or: [
+            { first_name: { $regex: search, $options: 'i' } },
+            { last_name: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+            { phone: { $regex: search, $options: 'i' } },
+          ],
+        }
+      : {};
 
     const [data, total] = await Promise.all([
-      this.userModel.find(query).skip((page - 1) * limit).limit(limit).exec(),
+      this.userModel
+        .find(query)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec(),
       this.userModel.countDocuments(query).exec(),
     ]);
 
@@ -134,7 +145,11 @@ export class UserService {
   }
 
   async updateStatus(id: string, status: boolean): Promise<User> {
-    const user = await this.userModel.findByIdAndUpdate(id, { status }, { new: true });
+    const user = await this.userModel.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true },
+    );
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -142,7 +157,11 @@ export class UserService {
   }
 
   async updateCourses(id: string, courseIds: string[]): Promise<User> {
-    const user = await this.userModel.findByIdAndUpdate(id, { courses: courseIds }, { new: true });
+    const user = await this.userModel.findByIdAndUpdate(
+      id,
+      { courses: courseIds },
+      { new: true },
+    );
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
