@@ -7,6 +7,11 @@ import {
   Req,
   Get,
   UseGuards,
+  Query,
+  ParseIntPipe,
+  DefaultValuePipe,
+  Patch,
+  Param,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Response } from 'express';
@@ -14,8 +19,11 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import { ConfirmRegistrationDto } from './dto/confirm-registration.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtAuthGuard } from './guards/auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { Role } from './user.schema';
 
-@Controller('auth')
+@Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -61,7 +69,31 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@Req() req) {
-    console.log(req.user);
     return { user: req.user };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get()
+  findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('search') search: string,
+  ) {
+    return this.userService.findAll(page, limit, search);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch(':id/status')
+  updateStatus(@Param('id') id: string, @Body('status') status: boolean) {
+    return this.userService.updateStatus(id, status);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch(':id/courses')
+  updateCourses(@Param('id') id: string, @Body('courses') courseIds: string[]) {
+    return this.userService.updateCourses(id, courseIds);
   }
 }

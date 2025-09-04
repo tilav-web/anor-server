@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -12,6 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { EskizService } from '../eskiz/eskiz.service';
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
@@ -23,6 +25,7 @@ export class UserService {
     private confirmationModel: Model<ConfirmationDocument>,
     private readonly mailerService: MailerService,
     private readonly jwtService: JwtService,
+    private readonly eskizService: EskizService,
   ) {}
 
   async create(
@@ -101,13 +104,49 @@ export class UserService {
         text: `Your confirmation code is: ${code}`,
       });
     } else {
-      // In a real application, you would use an SMS gateway here.
-      console.log(`Confirmation code for ${recipient}: ${code}`);
+      await this.eskizService.sendSms(
+        normalizePhone(recipient),
+        `uygunlik.uz saytidan ro'yhatdan o'tish uchun kod: ${code}`,
+      );
     }
+  }
+
+  async findAll(page: number, limit: number, search: string): Promise<{ data: User[], total: number }> {
+    const query = search ? {
+      $or: [
+        { first_name: { $regex: search, $options: 'i' } },
+        { last_name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+      ],
+    } : {};
+
+    const [data, total] = await Promise.all([
+      this.userModel.find(query).skip((page - 1) * limit).limit(limit).exec(),
+      this.userModel.countDocuments(query).exec(),
+    ]);
+
+    return { data, total };
   }
 
   async findById(userId: string): Promise<User> {
     return this.userModel.findById(userId);
+  }
+
+  async updateStatus(id: string, status: boolean): Promise<User> {
+    const user = await this.userModel.findByIdAndUpdate(id, { status }, { new: true });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return user;
+  }
+
+  async updateCourses(id: string, courseIds: string[]): Promise<User> {
+    const user = await this.userModel.findByIdAndUpdate(id, { courses: courseIds }, { new: true });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return user;
   }
 
   async confirm(recipient: string, code: string): Promise<boolean> {

@@ -5,13 +5,19 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { VideoModule } from './modules/video/video.module';
 import { CourseModule } from './modules/course/course.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { EskizModule } from './modules/eskiz/eskiz.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/anor'),
     UserModule,
     VideoModule,
     CourseModule,
+    EskizModule,
     MailerModule.forRoot({
       transport: {
         host: 'smtp.ethereal.email',

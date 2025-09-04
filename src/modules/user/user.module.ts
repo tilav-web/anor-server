@@ -7,6 +7,7 @@ import { Confirmation, ConfirmationSchema } from './confirmation.schema';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { EskizModule } from '../eskiz/eskiz.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       secret: process.env.JWT_SECRET || 'your_super_secret_key', // It's better to use environment variables for the secret
       signOptions: { expiresIn: '1d' },
     }),
+    EskizModule,
   ],
   controllers: [UserController],
   providers: [UserService, JwtStrategy],

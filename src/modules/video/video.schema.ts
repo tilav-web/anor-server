@@ -14,6 +14,9 @@ export class Video {
   @Prop({ required: true })
   url: string;
 
+  @Prop({ required: true })
+  type: string;
+
   @Prop()
   duration: number; // in seconds
 }

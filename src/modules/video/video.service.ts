@@ -4,6 +4,9 @@ import { Model } from 'mongoose';
 import { Video, VideoDocument } from './video.schema';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
+import * as fs from 'fs';
+import * as path from 'path';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class VideoService {
@@ -12,12 +15,24 @@ export class VideoService {
   ) {}
 
   async create(file: Express.Multer.File, createVideoDto: CreateVideoDto): Promise<Video> {
-    // In a real-world application, you would upload the file to a cloud storage
-    // and save the URL here. For this example, we're saving the local file path.
+    const uploadPath = 'uploads';
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    const uniqueSuffix = randomBytes(16).toString('hex');
+    const extension = path.extname(file.originalname);
+    const newFilename = `${uniqueSuffix}${extension}`;
+    const newPath = path.join(uploadPath, newFilename);
+
+    fs.renameSync(file.path, newPath);
+
     const createdVideo = new this.videoModel({
       ...createVideoDto,
-      url: file.path,
+      url: newPath,
+      type: file.mimetype,
     });
+
     return createdVideo.save();
   }
 
@@ -36,7 +51,10 @@ export class VideoService {
   }
 
   async remove(id: string): Promise<any> {
-    // In a real-world application, you would also delete the file from cloud storage.
+    const video = await this.videoModel.findById(id).exec();
+    if (video && fs.existsSync(video.url)) {
+      fs.unlinkSync(video.url);
+    }
     return this.videoModel.findByIdAndDelete(id).exec();
   }
 }
