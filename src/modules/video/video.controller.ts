@@ -26,7 +26,11 @@ export class VideoController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post()
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB
+    }),
+  )
   create(
     @UploadedFile() file: Express.Multer.File,
     @Body() createVideoDto: CreateVideoDto,

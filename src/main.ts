@@ -4,18 +4,18 @@ import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
-    origin: ['https://uygunlik.uz', 'https://www.uygunlik.uz'],
+    origin: '*', // Allow all origins for debugging
     credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
   });
   app.use(cookieParser());
-  
+  app.use(bodyParser.json({ limit: '2gb' }));
+  app.use(bodyParser.urlencoded({ limit: '2gb', extended: true }));
 
   await app.listen(process.env.PORT ?? 3001);
 }
