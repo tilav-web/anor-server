@@ -48,6 +48,11 @@ export class VideoController {
     return this.videoService.findOne(id);
   }
 
+  @Get('by-filename/:filename')
+  findByFilename(@Param('filename') filename: string) {
+    return this.videoService.findByFilename(filename);
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Patch(':id')

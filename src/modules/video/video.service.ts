@@ -47,6 +47,11 @@ export class VideoService {
     return this.videoModel.findById(id).exec();
   }
 
+  async findByFilename(filename: string): Promise<Video> {
+    const videoPath = path.join('uploads', filename);
+    return this.videoModel.findOne({ url: videoPath }).exec();
+  }
+
   async update(id: string, updateVideoDto: UpdateVideoDto): Promise<Video> {
     return this.videoModel
       .findByIdAndUpdate(id, updateVideoDto, { new: true })
