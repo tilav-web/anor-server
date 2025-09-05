@@ -14,7 +14,10 @@ export class VideoService {
     @InjectModel(Video.name) private videoModel: Model<VideoDocument>,
   ) {}
 
-  async create(file: Express.Multer.File, createVideoDto: CreateVideoDto): Promise<Video> {
+  async create(
+    file: Express.Multer.File,
+    createVideoDto: CreateVideoDto,
+  ): Promise<Video> {
     const uploadPath = 'uploads';
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });

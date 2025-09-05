@@ -8,8 +8,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
     origin: ['https://uygunlik.uz', 'https://www.uygunlik.uz'],
-    methods: 'GET,POST,PUT,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
   });
   app.use(cookieParser());
