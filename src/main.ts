@@ -11,6 +11,8 @@ async function bootstrap() {
   app.enableCors({
     origin: ['https://uygunlik.uz', 'https://www.uygunlik.uz'],
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
   app.use(cookieParser());
   
