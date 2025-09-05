@@ -13,9 +13,7 @@ async function bootstrap() {
     credentials: true,
   });
   app.use(cookieParser());
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
-  });
+  
 
   await app.listen(process.env.PORT ?? 3001);
 }

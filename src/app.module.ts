@@ -8,6 +8,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EskizModule } from './modules/eskiz/eskiz.module';
+import { VideoStreamModule } from './modules/video-stream/video-stream.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { EskizModule } from './modules/eskiz/eskiz.module';
     VideoModule,
     CourseModule,
     EskizModule,
+    VideoStreamModule,
     MailerModule.forRoot({
       transport: {
         host: 'smtp.ethereal.email',
