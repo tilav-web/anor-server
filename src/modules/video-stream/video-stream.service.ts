@@ -5,7 +5,7 @@ import { join } from 'path';
 @Injectable()
 export class VideoStreamService {
   getVideoStream(filename: string) {
-    const videoPath = join(__dirname, '..', '..', 'uploads', filename);
+    const videoPath = join(process.cwd(), 'uploads', filename);
     try {
       const stats = statSync(videoPath);
       const fileStream = createReadStream(videoPath);
