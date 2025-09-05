@@ -8,7 +8,7 @@ import * as bodyParser from 'body-parser';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useGlobalPipes(new ValidationPipe());
-  
+
   app.use(cookieParser());
   app.use(bodyParser.json({ limit: '2gb' }));
   app.use(bodyParser.urlencoded({ limit: '2gb', extended: true }));

@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Param,
-  Req,
   Res,
   UseGuards,
   StreamableFile,
@@ -23,7 +22,8 @@ export class VideoStreamController {
     @Res({ passthrough: true }) res: Response,
     @Headers('range') range: string,
   ) {
-    const { fileStream, stats } = this.videoStreamService.getVideoStream(filename);
+    const { fileStream, stats } =
+      this.videoStreamService.getVideoStream(filename);
 
     const fileSize = stats.size;
 
