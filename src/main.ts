@@ -3,14 +3,13 @@ import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
 import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
-    origin: '*', // Allow all origins for debugging
+    origin: ['https://uygunlik.uz', 'https://www.uygunlik.uz'], // Allow all origins for debugging
     credentials: true,
   });
   app.use(cookieParser());
