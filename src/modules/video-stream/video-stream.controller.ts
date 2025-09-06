@@ -38,8 +38,10 @@ export class VideoStreamController {
     }
 
     // Get file stream and stats
-    const { fileStream, stats } =
-      await this.videoStreamService.getVideoStream(filename);
+    const { fileStream, stats } = await this.videoStreamService.getVideoStream(
+      filename,
+      range,
+    );
 
     if (!fileStream || !stats) {
       throw new NotFoundException(`File ${filename} not found`);
@@ -68,14 +70,22 @@ export class VideoStreamController {
     let statusCode = 200;
 
     if (range) {
+      if (!range.startsWith('bytes=')) {
+        throw new BadRequestException('Invalid range header');
+      }
       const parts = range.replace(/bytes=/, '').split('-');
+      if (parts.length < 1 || parts.length > 2) {
+        throw new BadRequestException('Invalid range format');
+      }
       start = parseInt(parts[0], 10);
       end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
-      // Validate range
+      // Validate range more strictly
       if (
         isNaN(start) ||
         isNaN(end) ||
+        start < 0 ||
+        end < 0 ||
         start > end ||
         start >= fileSize ||
         end >= fileSize
@@ -101,7 +111,14 @@ export class VideoStreamController {
       console.error('Stream error:', err);
       if (!res.headersSent) {
         res.status(500).send('Stream error');
+      } else {
+        res.end(); // Close the response if headers are already sent
       }
+    });
+
+    // Ensure response ends properly
+    fileStream.on('end', () => {
+      res.end();
     });
 
     // No return needed since we're piping to res
