@@ -23,76 +23,45 @@ export class VideoStreamController {
   @UseGuards(JwtAuthGuard)
   async getVideo(
     @Param('filename') filename: string,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
     @Headers('range') range: string,
     @Req() req: Request,
   ) {
-    // Validate filename to prevent path traversal
+    // Filename validatsiya
     if (!filename.match(/^[a-zA-Z0-9_\-\.]+$/)) {
       throw new BadRequestException('Invalid filename');
     }
 
-    // Check authentication (assuming req.user is set by guard)
+    // Guard ishlamasa, qo'shimcha tekshiruv
     if (!req.user) {
       throw new UnauthorizedException('Invalid or missing token');
     }
 
-    // Get file stream and stats
-    const { fileStream, stats } = await this.videoStreamService.getVideoStream(
-      filename,
-      range,
-    );
+    // Servisdan stream va hajmni olish
+    const { fileStream, start, end, fileSize } =
+      await this.videoStreamService.getVideoStream(filename, range);
 
-    if (!fileStream || !stats) {
+    if (!fileStream) {
       throw new NotFoundException(`File ${filename} not found`);
     }
 
-    const fileSize = stats.size;
-
-    // Determine MIME type dynamically
+    // MIME type aniqlash
     const mimeTypes = {
       '.mp4': 'video/mp4',
       '.webm': 'video/webm',
       '.avi': 'video/x-msvideo',
-      // Add more as needed
     };
     const contentType =
       mimeTypes[extname(filename).toLowerCase()] || 'video/mp4';
 
-    // Common headers
+    // Headerlar
+    let statusCode = 200;
     const head: any = {
       'Content-Type': contentType,
       'Accept-Ranges': 'bytes',
     };
 
-    let start = 0;
-    let end = fileSize - 1;
-    let statusCode = 200;
-
     if (range) {
-      if (!range.startsWith('bytes=')) {
-        throw new BadRequestException('Invalid range header');
-      }
-      const parts = range.replace(/bytes=/, '').split('-');
-      if (parts.length < 1 || parts.length > 2) {
-        throw new BadRequestException('Invalid range format');
-      }
-      start = parseInt(parts[0], 10);
-      end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
-      // Validate range more strictly
-      if (
-        isNaN(start) ||
-        isNaN(end) ||
-        start < 0 ||
-        end < 0 ||
-        start > end ||
-        start >= fileSize ||
-        end >= fileSize
-      ) {
-        throw new BadRequestException('Invalid range');
-      }
-
       const chunksize = end - start + 1;
       head['Content-Range'] = `bytes ${start}-${end}/${fileSize}`;
       head['Content-Length'] = chunksize;
@@ -101,26 +70,25 @@ export class VideoStreamController {
       head['Content-Length'] = fileSize;
     }
 
+    // Javob yozish
     res.writeHead(statusCode, head);
 
-    // Pipe the stream to response
+    // Streamni responsega ulash
     fileStream.pipe(res);
 
-    // Handle stream errors
+    // Error handling
     fileStream.on('error', (err) => {
       console.error('Stream error:', err);
       if (!res.headersSent) {
         res.status(500).send('Stream error');
       } else {
-        res.end(); // Close the response if headers are already sent
+        res.end();
       }
     });
 
-    // Ensure response ends properly
+    // Stream tugaganda response ham yopiladi
     fileStream.on('end', () => {
       res.end();
     });
-
-    // No return needed since we're piping to res
   }
 }
