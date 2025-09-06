@@ -17,4 +17,9 @@ export class CreateCourseDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   category: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  videos?: string[];
 }
