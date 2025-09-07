@@ -12,6 +12,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { EskizService } from '../eskiz/eskiz.service';
 
@@ -190,5 +191,47 @@ export class UserService {
   private async _createToken(user: UserDocument): Promise<string> {
     const payload = { _id: user._id };
     return this.jwtService.signAsync(payload);
+  }
+
+  async updateProfile(
+    userId: string,
+    updateProfileDto: UpdateProfileDto,
+  ): Promise<User> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (updateProfileDto.email && updateProfileDto.email !== user.email) {
+      const existingUser = await this.userModel.findOne({ email: updateProfileDto.email });
+      if (existingUser) {
+        throw new ConflictException('Email already in use');
+      }
+      user.email = updateProfileDto.email;
+    }
+
+    if (updateProfileDto.phone && updateProfileDto.phone !== user.phone) {
+      const normalizedPhone = normalizePhone(updateProfileDto.phone);
+      const existingUser = await this.userModel.findOne({ phone: normalizedPhone });
+      if (existingUser) {
+        throw new ConflictException('Phone already in use');
+      }
+      user.phone = normalizedPhone;
+    }
+
+    if (updateProfileDto.first_name) {
+      user.first_name = updateProfileDto.first_name;
+    }
+
+    if (updateProfileDto.last_name) {
+      user.last_name = updateProfileDto.last_name;
+    }
+
+    if (updateProfileDto.password) {
+      const salt = await bcrypt.genSalt();
+      user.password = await bcrypt.hash(updateProfileDto.password, salt);
+    }
+
+    return user.save();
   }
 }

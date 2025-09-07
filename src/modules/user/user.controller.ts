@@ -18,6 +18,7 @@ import { Response } from 'express';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { ConfirmRegistrationDto } from './dto/confirm-registration.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -70,6 +71,12 @@ export class UserController {
   @Get('me')
   async me(@Req() req) {
     return { user: req.user };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  async updateProfile(@Req() req, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.userService.updateProfile(req.user._id, updateProfileDto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
