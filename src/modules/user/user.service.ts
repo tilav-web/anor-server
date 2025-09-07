@@ -39,7 +39,8 @@ export class UserService {
     const salt = await bcrypt.genSalt();
     createUserDto.password = await bcrypt.hash(createUserDto.password, salt);
     const createdUser = new this.userModel(createUserDto);
-    const user = await createdUser.save();
+    await createdUser.save();
+    const user = await this.userModel.findById(createdUser._id).populate({ path: 'courses', populate: { path: 'videos' } });
     const token = await this._createToken(user);
     return { user, token };
   }
@@ -54,7 +55,7 @@ export class UserService {
       throw new UnauthorizedException('Please provide email or phone');
     }
 
-    const user = await this.userModel.findOne(findCondition);
+    const user = await this.userModel.findOne(findCondition).populate({ path: 'courses', populate: { path: 'videos' } });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -145,6 +146,10 @@ export class UserService {
     return this.userModel.findById(userId);
   }
 
+  async findMe(userId: string): Promise<User> {
+    return this.userModel.findById(userId).populate({ path: 'courses', populate: { path: 'videos' } });
+  }
+
   async updateStatus(id: string, status: boolean): Promise<User> {
     const user = await this.userModel.findByIdAndUpdate(
       id,
@@ -232,6 +237,7 @@ export class UserService {
       user.password = await bcrypt.hash(updateProfileDto.password, salt);
     }
 
-    return user.save();
+    await user.save();
+    return this.userModel.findById(userId).populate({ path: 'courses', populate: { path: 'videos' } });
   }
 }

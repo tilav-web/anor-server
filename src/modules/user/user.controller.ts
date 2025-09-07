@@ -70,7 +70,8 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@Req() req) {
-    return { user: req.user };
+    const user = await this.userService.findMe(req.user._id);
+    return { user };
   }
 
   @UseGuards(JwtAuthGuard)
