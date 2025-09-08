@@ -140,7 +140,7 @@ export class UserService {
         .populate({
           path: 'courses',
           populate: {
-            path: 'video',
+            path: 'videos',
           },
         })
         .skip((page - 1) * limit)
