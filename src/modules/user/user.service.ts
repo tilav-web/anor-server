@@ -40,7 +40,9 @@ export class UserService {
     createUserDto.password = await bcrypt.hash(createUserDto.password, salt);
     const createdUser = new this.userModel(createUserDto);
     await createdUser.save();
-    const user = await this.userModel.findById(createdUser._id).populate({ path: 'courses', populate: { path: 'videos' } });
+    const user = await this.userModel
+      .findById(createdUser._id)
+      .populate({ path: 'courses', populate: { path: 'videos' } });
     const token = await this._createToken(user);
     return { user, token };
   }
@@ -55,7 +57,9 @@ export class UserService {
       throw new UnauthorizedException('Please provide email or phone');
     }
 
-    const user = await this.userModel.findOne(findCondition).populate({ path: 'courses', populate: { path: 'videos' } });
+    const user = await this.userModel
+      .findOne(findCondition)
+      .populate({ path: 'courses', populate: { path: 'videos' } });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -133,6 +137,12 @@ export class UserService {
     const [data, total] = await Promise.all([
       this.userModel
         .find(query)
+        .populate({
+          path: 'courses',
+          populate: {
+            path: 'video',
+          },
+        })
         .skip((page - 1) * limit)
         .limit(limit)
         .exec(),
@@ -147,7 +157,9 @@ export class UserService {
   }
 
   async findMe(userId: string): Promise<User> {
-    return this.userModel.findById(userId).populate({ path: 'courses', populate: { path: 'videos' } });
+    return this.userModel
+      .findById(userId)
+      .populate({ path: 'courses', populate: { path: 'videos' } });
   }
 
   async updateStatus(id: string, status: boolean): Promise<User> {
@@ -208,7 +220,9 @@ export class UserService {
     }
 
     if (updateProfileDto.email && updateProfileDto.email !== user.email) {
-      const existingUser = await this.userModel.findOne({ email: updateProfileDto.email });
+      const existingUser = await this.userModel.findOne({
+        email: updateProfileDto.email,
+      });
       if (existingUser) {
         throw new ConflictException('Email already in use');
       }
@@ -217,7 +231,9 @@ export class UserService {
 
     if (updateProfileDto.phone && updateProfileDto.phone !== user.phone) {
       const normalizedPhone = normalizePhone(updateProfileDto.phone);
-      const existingUser = await this.userModel.findOne({ phone: normalizedPhone });
+      const existingUser = await this.userModel.findOne({
+        phone: normalizedPhone,
+      });
       if (existingUser) {
         throw new ConflictException('Phone already in use');
       }
@@ -238,6 +254,8 @@ export class UserService {
     }
 
     await user.save();
-    return this.userModel.findById(userId).populate({ path: 'courses', populate: { path: 'videos' } });
+    return this.userModel
+      .findById(userId)
+      .populate({ path: 'courses', populate: { path: 'videos' } });
   }
 }
