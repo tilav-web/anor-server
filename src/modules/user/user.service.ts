@@ -7,33 +7,25 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './user.schema';
-import { Confirmation, ConfirmationDocument } from './confirmation.schema';
-import { MailerService } from '@nestjs-modules/mailer';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { EskizService } from '../eskiz/eskiz.service';
-
-const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Confirmation.name)
-    private confirmationModel: Model<ConfirmationDocument>,
-    private readonly mailerService: MailerService,
     private readonly jwtService: JwtService,
-    private readonly eskizService: EskizService,
   ) {}
 
   async create(
     createUserDto: CreateUserDto,
   ): Promise<{ user: User; token: string }> {
-    if (createUserDto.phone) {
-      createUserDto.phone = normalizePhone(createUserDto.phone);
+    const existingUser = await this.userModel.findOne({ email: createUserDto.email });
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
     }
 
     const salt = await bcrypt.genSalt();
@@ -48,17 +40,8 @@ export class UserService {
   }
 
   async login(loginDto: LoginUserDto): Promise<{ user: User; token: string }> {
-    let findCondition;
-    if (loginDto.email) {
-      findCondition = { email: loginDto.email };
-    } else if (loginDto.phone) {
-      findCondition = { phone: normalizePhone(loginDto.phone) };
-    } else {
-      throw new UnauthorizedException('Please provide email or phone');
-    }
-
     const user = await this.userModel
-      .findOne(findCondition)
+      .findOne({ email: loginDto.email })
       .populate({ path: 'courses', populate: { path: 'videos' } });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -77,47 +60,6 @@ export class UserService {
     return { user, token };
   }
 
-  async sendConfirmationCode(recipient: string, type: 'email' | 'phone') {
-    const findCondition =
-      type === 'email'
-        ? { email: recipient }
-        : { phone: normalizePhone(recipient) };
-
-    const existingUser = await this.userModel.findOne(findCondition);
-    if (existingUser) {
-      throw new ConflictException(
-        'User with this email or phone already exists',
-      );
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(code);
-    const salt = await bcrypt.genSalt();
-    const hashedCode = await bcrypt.hash(code, salt);
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
-
-    await this.confirmationModel.create({
-      recipient,
-      type,
-      code: hashedCode,
-      expiresAt,
-    });
-
-    if (type === 'email') {
-      await this.mailerService.sendMail({
-        to: recipient,
-        subject: 'Confirmation Code',
-        text: `Your confirmation code is: ${code}`,
-      });
-    } else {
-      await this.eskizService.sendSms(
-        normalizePhone(recipient),
-        `uygunlik.uz saytidan ro'yhatdan o'tish uchun kod: ${code}`,
-      );
-    }
-  }
-
   async findAll(
     page: number,
     limit: number,
@@ -129,7 +71,6 @@ export class UserService {
             { first_name: { $regex: search, $options: 'i' } },
             { last_name: { $regex: search, $options: 'i' } },
             { email: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } },
           ],
         }
       : {};
@@ -153,7 +94,7 @@ export class UserService {
   }
 
   async findById(userId: string): Promise<User> {
-    return this.userModel.findById(userId);
+    return this.userModel.findById(userId).exec();
   }
 
   async findMe(userId: string): Promise<User> {
@@ -186,25 +127,6 @@ export class UserService {
     return user;
   }
 
-  async confirm(recipient: string, code: string): Promise<boolean> {
-    const confirmation = await this.confirmationModel
-      .findOne({
-        recipient,
-        expiresAt: { $gt: new Date() },
-      })
-      .sort({ createdAt: -1 });
-
-    if (confirmation) {
-      const isCodeMatching = await bcrypt.compare(code, confirmation.code);
-      if (isCodeMatching) {
-        await this.confirmationModel.deleteOne({ _id: confirmation._id });
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   private async _createToken(user: UserDocument): Promise<string> {
     const payload = { _id: user._id };
     return this.jwtService.signAsync(payload);
@@ -227,17 +149,6 @@ export class UserService {
         throw new ConflictException('Email already in use');
       }
       user.email = updateProfileDto.email;
-    }
-
-    if (updateProfileDto.phone && updateProfileDto.phone !== user.phone) {
-      const normalizedPhone = normalizePhone(updateProfileDto.phone);
-      const existingUser = await this.userModel.findOne({
-        phone: normalizedPhone,
-      });
-      if (existingUser) {
-        throw new ConflictException('Phone already in use');
-      }
-      user.phone = normalizedPhone;
     }
 
     if (updateProfileDto.first_name) {

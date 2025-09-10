@@ -20,10 +20,6 @@ export class UpdateProfileDto {
   email?: string;
 
   @IsOptional()
-  @IsPhoneNumber('UZ')
-  phone?: string;
-
-  @IsOptional()
   @IsString()
   @MinLength(6)
   password?: string;

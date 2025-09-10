@@ -17,10 +17,7 @@ export class User {
   @Prop()
   last_name: string;
 
-  @Prop({ unique: true, sparse: true })
-  phone: string;
-
-  @Prop({ unique: true, sparse: true })
+  @Prop({ unique: true, required: true })
   email: string;
 
   @Prop()
