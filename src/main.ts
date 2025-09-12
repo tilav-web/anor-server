@@ -10,7 +10,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   app.enableCors({
-    origin: ['uygunlik.uz'],
+    origin: ['https://uygunlik.uz'],
     credentials: true,
   });
 
