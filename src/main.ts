@@ -10,7 +10,14 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   app.enableCors({
-    origin: ['https://uygunlik.uz', 'https://www.uygunlik.uz'],
+    origin: (origin, callback) => {
+      const allowedOrigins = ['https://uygunlik.uz', 'https://www.uygunlik.uz'];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
