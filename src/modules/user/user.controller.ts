@@ -26,15 +26,15 @@ import { Role } from './user.schema';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post('register')
-  async register(
-    @Body() createUserDto: CreateUserDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { user, token } = await this.userService.create(createUserDto);
-    res.cookie('jwt', token, { httpOnly: true });
-    return { user };
-  }
+  // @Post('register')
+  // async register(
+  //   @Body() createUserDto: CreateUserDto,
+  //   @Res({ passthrough: true }) res: Response,
+  // ) {
+  //   const { user, token } = await this.userService.create(createUserDto);
+  //   res.cookie('jwt', token, { httpOnly: true });
+  //   return { user };
+  // }
 
   @Post('login')
   async login(
@@ -46,12 +46,12 @@ export class UserController {
     return { user };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('me')
-  async me(@Req() req) {
-    const user = await this.userService.findMe(req.user._id);
-    return { user };
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Get('me')
+  // async me(@Req() req) {
+  //   const user = await this.userService.findMe(req.user._id);
+  //   return { user };
+  // }
 
   @UseGuards(JwtAuthGuard)
   @Patch('me')
